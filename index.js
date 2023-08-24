@@ -1,18 +1,19 @@
 const { Octokit } = require("@octokit/rest");
 const fetch = require("node-fetch");
 const dotenv = require("dotenv");
+const Client = require("pg").Client;
 
 dotenv.config();
 const octokit = new Octokit({
   auth: process.env.AUTH_KEY,
   request: { fetch },
 });
-console.log(process.env.REPO);
-const repo = process.env.REPO;
 const owner = "brandonetter";
 
 const NEEDS_REVIEW_LABEL = "needs review";
 const AWAITING_CHANGES_LABEL = "Awaiting Changes";
+const connectionString = process.env.DATABASE_URL;
+const client = new Client({ connectionString });
 
 async function addLabelsToPR(owner, repo, pull_number, labels) {
   try {
@@ -149,7 +150,9 @@ async function addLabelIfCommitIsNewer(owner, repo, pull_number, labelToAdd) {
       console.log(`Added label "${labelToAdd}" to PR #${pull_number}`);
     } else {
       console.log(
-        "Last commit is not newer than the last label. No label added."
+        "PR#" +
+          pull_number +
+          ": Last commit is not newer than the last label. No label added."
       );
     }
   } catch (error) {
@@ -158,9 +161,25 @@ async function addLabelIfCommitIsNewer(owner, repo, pull_number, labelToAdd) {
 }
 
 (async () => {
-  let prs = await listAllPRs(owner, repo);
-  for (let pr of prs) {
-    await addLabelIfCommitIsNewer(owner, repo, pr.number, NEEDS_REVIEW_LABEL);
+  await client.connect();
+  const query = {
+    name: "fetch-repos",
+    text: "SELECT * FROM repos",
+  };
+
+  const repos = await client.query(query);
+  for (let repo of repos.rows) {
+    console.log(`Checking repo: ${repo.reponame}`);
+    let prs = await listAllPRs(owner, repo.reponame);
+    for (let pr of prs) {
+      await addLabelIfCommitIsNewer(
+        owner,
+        repo.reponame,
+        pr.number,
+        NEEDS_REVIEW_LABEL
+      );
+    }
   }
+  process.exit(0);
 })();
 // addLabelIfCommitIsNewer(owner, repo, issue_number, NEEDS_REVIEW_LABEL);
