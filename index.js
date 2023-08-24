@@ -1,7 +1,10 @@
 const { Octokit } = require("@octokit/rest");
 const fetch = require("node-fetch");
+const dotenv = require("dotenv");
+
+dotenv.config();
 const octokit = new Octokit({
-  auth: "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",
+  auth: process.env.AUTH_KEY,
   request: { fetch },
 });
 const repo = "next13promsies";
