@@ -7,9 +7,9 @@ const octokit = new Octokit({
   auth: process.env.AUTH_KEY,
   request: { fetch },
 });
+console.log(process.env.REPO);
 const repo = process.env.REPO;
 const owner = "brandonetter";
-const issue_number = 7;
 
 const NEEDS_REVIEW_LABEL = "needs review";
 const AWAITING_CHANGES_LABEL = "Awaiting Changes";
@@ -32,13 +32,13 @@ async function addLabelsToPR(owner, repo, pull_number, labels) {
     console.error("Error adding labels:", error);
   }
 }
-getDateOfLastLabelAdded(owner, repo, issue_number).then((date) => {
-  if (date) {
-    console.log(`The last label was added on: ${date}`);
-  } else {
-    console.log("No labels were found for the specified issue or PR.");
-  }
-});
+// getDateOfLastLabelAdded(owner, repo, issue_number).then((date) => {
+//   if (date) {
+//     console.log(`The last label was added on: ${date}`);
+//   } else {
+//     console.log("No labels were found for the specified issue or PR.");
+//   }
+// });
 // Example usage
 // addLabelsToPR("brandonetter", "next13promsies", 7, ["label1", "label2"]);
 
