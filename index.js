@@ -7,7 +7,7 @@ const octokit = new Octokit({
   auth: process.env.AUTH_KEY,
   request: { fetch },
 });
-const repo = "next13promsies";
+const repo = process.env.REPO;
 const owner = "brandonetter";
 const issue_number = 7;
 
