@@ -5,43 +5,15 @@ const Client = require("pg").Client;
 
 dotenv.config();
 const octokit = new Octokit({
-  auth: process.env.AUTH_KEY,
+  auth: process.env.AUTH_KEY, // github access token
   request: { fetch },
 });
-const owner = "brandonetter";
 
-const NEEDS_REVIEW_LABEL = "needs review";
-const AWAITING_CHANGES_LABEL = "Awaiting Changes";
-const connectionString = process.env.DATABASE_URL;
+const owner = "brandonetter"; // we would change this to JavaScript-Mastery-Pro
+const NEEDS_REVIEW_LABEL = "needs review"; // the label that gets added if the PR is newer than the last label
+
+const connectionString = process.env.DATABASE_URL; // supabase database url
 const client = new Client({ connectionString });
-
-async function addLabelsToPR(owner, repo, pull_number, labels) {
-  try {
-    await octokit.rest.issues.addLabels({
-      owner,
-      repo,
-      // pull requests are just issues in the GitHub API, so you can use issue_number interchangeably with pull_number
-      issue_number: pull_number,
-      labels,
-    });
-    console.log(
-      `Labels ${labels.join(
-        ", "
-      )} added to PR #${pull_number} in ${owner}/${repo}`
-    );
-  } catch (error) {
-    console.error("Error adding labels:", error);
-  }
-}
-// getDateOfLastLabelAdded(owner, repo, issue_number).then((date) => {
-//   if (date) {
-//     console.log(`The last label was added on: ${date}`);
-//   } else {
-//     console.log("No labels were found for the specified issue or PR.");
-//   }
-// });
-// Example usage
-// addLabelsToPR("brandonetter", "next13promsies", 7, ["label1", "label2"]);
 
 async function getDateOfLastLabelAdded(owner, repo, issue_number) {
   const events = await octokit.rest.issues.listEvents({
@@ -68,6 +40,7 @@ async function getDateOfLastCommit(owner, repo, pull_number) {
     ? commits.data[commits.data.length - 1].commit.committer.date
     : null;
 }
+
 async function removeAllLabels(owner, repo, issue_number) {
   try {
     const labels = await octokit.rest.issues.listLabelsOnIssue({
@@ -109,11 +82,11 @@ async function listAllPRs(owner, repo, state = "open") {
         owner,
         repo,
         state,
-        per_page: 100, // Maximum number of results per page
+        per_page: 100, // more than 100 prs is uhh... unlikely
         page,
       });
 
-      if (prs.data.length === 0) break; // Break the loop if no more PRs
+      if (prs.data.length === 0) break;
 
       allPRs = allPRs.concat(prs.data);
       page++;
@@ -182,4 +155,3 @@ async function addLabelIfCommitIsNewer(owner, repo, pull_number, labelToAdd) {
   }
   process.exit(0);
 })();
-// addLabelIfCommitIsNewer(owner, repo, issue_number, NEEDS_REVIEW_LABEL);
