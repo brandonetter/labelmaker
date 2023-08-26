@@ -11,7 +11,7 @@ const octokit = new Octokit({
 
 const owner = "brandonetter"; // we would change this to JavaScript-Mastery-Pro
 const NEEDS_REVIEW_LABEL = "needs review"; // the label that gets added if the PR is newer than the last label
-
+const MERGE_CONFLICT_LABEL = "merge conflict"; // the label that gets added if the PR is not mergeable
 const connectionString = process.env.DATABASE_URL; // supabase database url
 const client = new Client({ connectionString });
 
@@ -72,6 +72,29 @@ async function removeLabel(owner, repo, issue_number, labelName) {
   }
 }
 
+async function checkMergable(owner, repo, pull_number) {
+  try {
+    const pr = await octokit.rest.pulls.get({
+      owner,
+      repo,
+      pull_number,
+    });
+
+    const mergeable = pr.data.mergeable;
+
+    if (mergeable === false) {
+      console.log(`PR #${pull_number} is not mergeable. Adding label`);
+      await octokit.rest.issues.addLabels({
+        owner,
+        repo,
+        issue_number: pull_number,
+        labels: [MERGE_CONFLICT_LABEL],
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching PR:", error);
+  }
+}
 async function listAllPRs(owner, repo, state = "open") {
   try {
     let allPRs = [];
@@ -145,6 +168,16 @@ async function addLabelIfCommitIsNewer(owner, repo, pull_number, labelToAdd) {
     console.log(`Checking repo: ${repo.reponame}`);
     let prs = await listAllPRs(owner, repo.reponame);
     for (let pr of prs) {
+      const labels = pr.labels.map((label) => label.name);
+      if (labels.includes(NEEDS_REVIEW_LABEL)) {
+        console.log(
+          `PR #${pr.number} already has the "${NEEDS_REVIEW_LABEL}" label. Skipping...`
+        );
+        if (!labels.includes(MERGE_CONFLICT_LABEL)) {
+          await checkMergable(owner, repo.reponame, pr.number);
+        }
+        continue;
+      }
       await addLabelIfCommitIsNewer(
         owner,
         repo.reponame,
