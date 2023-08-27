@@ -9,7 +9,7 @@ const octokit = new Octokit({
   request: { fetch },
 });
 
-const owner = "brandonetter"; // we would change this to JavaScript-Mastery-Pro
+const owner = "JavaScript-Mastery-PRO"; // we would change this to JavaScript-Mastery-Pro
 const NEEDS_REVIEW_LABEL = "needs review"; // the label that gets added if the PR is newer than the last label
 const MERGE_CONFLICT_LABEL = "merge conflict"; // the label that gets added if the PR is not mergeable
 const connectionString = process.env.DATABASE_URL; // supabase database url
@@ -69,6 +69,29 @@ async function removeLabel(owner, repo, issue_number, labelName) {
     );
   } catch (error) {
     console.error(`Error removing label "${labelName}":`, error);
+  }
+}
+async function checkRemoveMergeable(owner, repo, pull_number) {
+  try {
+    const pr = await octokit.rest.pulls.get({
+      owner,
+      repo,
+      pull_number,
+    });
+
+    const mergeable = pr.data.mergeable;
+
+    if (mergeable === true) {
+      console.log(`PR #${pull_number} is mergeable. Removing label`);
+      await octokit.rest.issues.removeLabel({
+        owner,
+        repo,
+        issue_number: pull_number,
+        name: MERGE_CONFLICT_LABEL,
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching PR:", error);
   }
 }
 
@@ -175,6 +198,8 @@ async function addLabelIfCommitIsNewer(owner, repo, pull_number, labelToAdd) {
         );
         if (!labels.includes(MERGE_CONFLICT_LABEL)) {
           await checkMergable(owner, repo.reponame, pr.number);
+        } else {
+          await checkRemoveMergeable(owner, repo.reponame, pr.number);
         }
         continue;
       }
